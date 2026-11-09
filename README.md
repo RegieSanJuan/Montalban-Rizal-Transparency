@@ -1,174 +1,101 @@
-# Transparency Portal
+# Montalban Transparency
 
-A small, forkable website that shows citizens **every FY 2027 budget project** for one
-LGU (province, city or municipality) or one DPWH district engineering office: what the
-NEP gave it, what the House bill (House Bill 10858) gives it, what was added or dropped,
-and the page of the source document each figure is on. Beside it, the **enacted budgets
-of 2020 to 2026** for the same area: each DPWH office's budget year by year, and every
-program or project in any department whose name names the place.
+**Pondo ng bayan. Malinaw sa lahat.**
+
+Montalban Transparency is an independent citizen portal for exploring national budget allocations and DPWH project records associated with **Rodriguez (Montalban), Rizal**. It brings project details, maps, contractor records and source documents into one readable website, with a detailed overview and a **“Sa simpleng salita”** guide.
+
+Run by Montalban citizens, on [BetterGov.ph data](https://budget.bettergov.ph/docs). This is **not an official government website**.
 
 <p align="center">
-  <img src="docs/poster/create-your-own-transparency-portal-1080x1080.png" alt="Create your own transparency portal: for your LGU or DPWH district office. A sample portal for the Province of Bohol, and three steps: fork, run npm run setup, deploy." width="540">
+  <img src="docs/images/montalban-transparency-poster.png" alt="Montalban Transparency: Pondo ng bayan. Malinaw sa lahat. Promotional poster showing the portal on desktop and mobile, with separately labelled DPWH and GAA snapshot counts." width="800">
 </p>
 
-**See a sample:** [transparency-portal.bettergov.workers.dev](https://transparency-portal.bettergov.workers.dev),
-the Province of Bohol, built from this repository as it is.
+[Download the poster](docs/images/montalban-transparency-poster.png). The poster is AI-generated promotional artwork; its device screens and phone map are illustrative, not evidence of a project’s location or status. Figures describe the November 8, 2026 snapshot and may change in future releases.
 
-It has no backend and no database. Everything comes from the public
-[BetterGov.ph Budget API](https://budget.bettergov.ph/docs), the same data behind
-[budget.bettergov.ph](https://budget.bettergov.ph/hgab/2027/overview). Build it once and
-host the static files anywhere: Cloudflare, Vercel, Netlify, GitHub Pages or a plain web
-server.
+## What you can explore
 
-## Five minutes to your own portal
+| Page | What you will find |
+| --- | --- |
+| **Detailed overview** (`/`) | Separate summaries of DPWH records, enacted budgets and FY2027 proposals, with links to full details, officials and engineering offices. |
+| **Sa simpleng salita** (`/para-sa-bayan`) | A citizen guide to the budget process, common terms, one worked record example and ways to check the sources. |
+| **Project records** (`/contracts`) | Searchable DPWH records with reported status, budget fields, contractor names, dates and source links. Filters and open records can be shared through the URL. |
+| **Project map** (`/mapa`) | Source-coordinate pins, filters and a matching list. Records without coordinates remain accessible separately. |
+| **Contractors** (`/kontratista`) | Source-name profiles, associated records and yearly breakdowns. These groupings do not independently establish legal identity or wrongdoing. |
+| **Enacted budgets** (`/gaa`) | GAA program/project families from 2020–2026, year and department filters, source references and exports. |
+| **FY2027 proposals** (`/panukala-2027`) | NEP and House bill comparisons, uncertainty labels and links to document pages. |
+| **About the data** (`/about`) | Scope, methodology, source notes, known gaps and the recorded update status. |
+
+### Snapshot coverage
+
+As retrieved on **November 8, 2026**:
+
+- **242 included DPWH project/contract records**, spanning 2016–2026.
+- **189 records with source coordinates** and **53 without coordinates**.
+- **89 contractor source-name groups**; records without a contractor name are identified separately.
+- **128 GAA program/project families**, spanning 2020–2026.
+- **3 explicitly town-named FY2027 NEP records** in the current proposal view.
+
+These are different units, sources and fiscal years. **Do not add their counts or amounts together.** The 189 mapped records are a subset of the 242 DPWH records. A GAA family is not necessarily one physical project.
+
+## Understanding the numbers
+
+- **NEP** is the Executive’s proposal; **GAA** is the enacted appropriation. Neither proves payment or completion.
+- NEP and House bill amounts are compared, **never added**. A line present in only one version is a lead for checking, not proof of an insertion, deletion or irregularity.
+- The DPWH **budget field**, bidding ceiling (**ABC**), award amount and actual expenditure are distinct. Missing values are shown as unknown, not zero.
+- Shared engineering-office totals stay whole. They are **not presented as Montalban’s municipal allocation**.
+- Coordinates and reported progress come from the source; they are not independent site verification.
+- Officials are listed to explain their roles, not to imply that they requested or controlled a project.
+
+### Coverage and freshness limits
+
+This is a verified source subset, **not a complete inventory of every municipal project or every peso spent in Montalban**. Municipal LGU budgets, AIP/APP documents, provincial projects, other agencies and project-level disbursements are not comprehensively covered. Uncertain location matches remain separate from included totals.
+
+The website uses saved GAA and DPWH snapshots alongside live Budget API requests. It shows retrieval dates and the latest recorded refresh attempt separately. A failed refresh keeps the last valid financial data; it does not mean that the data was successfully updated. **Automatic publication of fresh snapshots is not enabled by this repository’s Vercel configuration.** New API schemas, years or datasets require validation before release.
+
+## Run locally
+
+Requires **Node.js 22.12+** (or another version allowed by `package.json`).
 
 ```bash
-git clone https://github.com/bettergovph/transparency-portal my-portal
-cd my-portal
-npm install
-npm run setup     # pick your province, city, municipality or DPWH office
-npm run check     # counts every query against the live API
-npm run dev       # http://localhost:5132
+git clone https://github.com/RegieSanJuan/Montalban-Rizal-Transparency.git
+cd Montalban-Rizal-Transparency
+npm ci
+npm run dev
 ```
 
-`npm run setup` asks a few questions, looks up exact names and ids in the API, and
-writes `portal.config.ts`. That file is the only one a fork needs to change.
+The configured development URL is **http://localhost:5132**. To use a different port:
 
-## What the portal shows
-
-| Page | What is on it |
-| --- | --- |
-| **Projects** (`/`) | The headline figures; the DPWH offices in scope (`#offices`), each with its 2027 figures, tier and status counts, and under it the legislative districts it serves with their representatives (a shared office's money is shown once, never split); the six statuses; and every project with search, filters (program, status, DPWH office, reason), sorting and a CSV download. An office's line count or status opens the list filtered to it. Filters live in the URL, so a filtered list can be shared. |
-| **Budgets 2020–2026** (`/gaa`) | The enacted budgets (GAA) for the same area: each DPWH office's whole budget by year, grouped by Congress, with the 2027 NEP and House bill beside it but apart; the yearly totals of the programs that name the place (click a year to filter); and every such program or project, in any department, with its amount in each year, search, department and year filters, and a CSV download. |
-| **A project** (`/projects/:program/:id`) | The amount in every version with a link to the exact PDF page, how the two versions were matched, notes on the line, and why it is in this portal. |
-| **About the data** (`/about`) | Every question the portal asks the API, for 2027 and for 2020–2026, with counts and a link to check each one, every line removed by hand and why, the source documents, plain-language rules and terms, and the notices. |
-
-## How a portal decides which projects are its own
-
-The scope in `portal.config.ts` has three parts. A project is in the portal for one or
-more stated reasons, and every row shows them.
-
-```ts
-scope: {
-  // Every DPWH line the documents list under these offices.
-  offices: ['Bohol 1st District Engineering Office'],
-  // Every line in the four programs whose title names the place.
-  places: [{ label: 'Bohol', region: 'VII' }],
-  // District cards to show (representative, offices, tiers).
-  districts: ['leg:bohol:1st'],
-  // Lines removed by hand. Each needs a reason; the About page publishes them.
-  exclude: [],
-}
+```bash
+npm run dev -- --port 5179
 ```
 
-- **A DPWH office** brings in its whole ledger. Use this for a DEO portal, and for a
-  province or city with its own district engineering offices.
-- **A place name** searches the titles of all four programs: DPWH, farm-to-market roads,
-  health facilities and irrigation. That catches projects under the DPWH Central Office
-  and the programs that have no office. `q` is the search: every word must appear
-  (`'Carmen Bohol'` needs both). `region` keeps a common name to one region; lines that
-  give no region at all (the irrigation list) are kept, since they cannot be ruled out.
-- **The same place names** search the enacted budgets, 2020–2026: every department's
-  programs, activities and projects whose name contains `q`. The GAA has no region, so
-  `region` cannot narrow these; make `q` specific instead. DPWH offices' yearly totals
-  come with the offices.
-- **Exclusions** are for namesakes: `<program>:<id>` for a 2027 line, `gaa:<family key>`
-  for a 2020–2026 program (the key is in the CSV). `npm run check -- --verbose` lists the
-  2027 lines found only by name under another office, which are the ones to review.
-
-Examples for each kind are in [`examples/`](examples): a DEO, a highly urbanised city
-(Quezon City, whose offices are shared), and a municipality (Carmen, Bohol, a name used
-in several provinces). Check any of them with `npm run check -- --config=examples/deo.config.ts`.
-
-### What it cannot do yet
-
-The API places DPWH money by **office**, and finds other lines by **name**. It does not
-yet say which city or municipality a project is in. A municipality portal therefore
-relies on titles that spell the town out. The source workbench's location lens, which
-places lines by the place their title names, is being brought into budget.bettergov.ph;
-once the API serves it, a municipality scope can use it directly. See
-[docs/api.md](docs/api.md#gaps).
-
-## Rules this portal keeps
-
-These come from the API and the comparison behind it. A fork should keep them.
-
-- Amounts are integer pesos as published. A dash means "this document has no such
-  line", never zero.
-- The NEP and the House bill are two versions of one budget: they are **compared, never
-  added**.
-- "In the House bill only" and "In the NEP only" are **candidates**: leads to check,
-  not confirmed insertions or deletions. Unconfirmed matches are flagged on every row.
-- A DPWH office that serves several districts (Tier B) is shown whole; its money is
-  never split between them.
-- The disclaimers are printed from the API response itself, so their wording cannot
-  drift from budget.bettergov.ph. Keep them on every page that shows figures.
-- Nothing is hidden silently: hand exclusions are listed, with reasons, on the About
-  page.
-- Enacted amounts (2020–2026) are appropriations: the authority to spend, not spending.
-  A year counts only where its amount is above zero. Years are shown side by side, and
-  the 2027 versions are never added to them.
-- `npm run check` reconciles every 2020–2026 search, department by department and year
-  by year, against the API's own totals, so a lost page cannot go unnoticed.
-
-## Citizen reports
-
-Reports about a project will go to one central service on budget.bettergov.ph for every
-portal (not built yet). A portal does not collect reports itself; it links to the central
-form with the project's reference. Until the service opens, `reporting.enabled` stays
-`false` and the project page says reporting is coming. The link contract is in
-[docs/reporting.md](docs/reporting.md).
-
-## Deploying
-
-`npm run build` writes static files to `dist/`. Each host needs one rule: unknown paths
-serve `index.html`, because the routes are client-side. That rule is already in the repo
-for each:
-
-| Host | How |
-| --- | --- |
-| Cloudflare Workers | `npm run deploy:cloudflare` (uses `wrangler.jsonc`; rename `name` first) |
-| Vercel | Import the repo; `vercel.json` has the build and the rewrite |
-| Netlify | Import the repo; `netlify.toml` has the build and the redirect |
-| Anything else | Serve `dist/` and send unknown paths to `/index.html` |
-
-Set `siteUrl` in the config for link previews. Set `VITE_API_BASE` only to point at a
-different API host (a staging copy, for example). More in [docs/deploy.md](docs/deploy.md).
-
-## Poster
-
-"Create your own transparency portal", for sharing: a
-[feed post (1080×1350)](https://budget-assets.bettergov.ph/hgab/2027/campaign/create-your-own-transparency-portal-1080x1350.png?v=222d351a)
-and a [square post (1080×1080)](https://budget-assets.bettergov.ph/hgab/2027/campaign/create-your-own-transparency-portal-1080x1080.png?v=9689903f),
-also in [`docs/poster/`](docs/poster) and the
-[BetterGov campaign gallery](https://budget-assets.bettergov.ph/hgab/2027/campaign/index.html).
-
-The sample image is the real portal, screenshotted when the poster is built, and the background lists every DPWH
-district engineering office. To rebuild it after a design change, run the portal (`npm run dev`) and then
-`npm run build:poster`. It needs Playwright's Chromium (`npx playwright-core install chromium`).
-
-## Stack
-
-React 19, TypeScript, Vite and React Router: the same as budget.bettergov.ph, with its
-type (Figtree, Inter, JetBrains Mono) and colours (`src/styles/theme.css`). Three runtime
-dependencies, about 95 KB gzipped. (`playwright-core`, a development dependency, is used only to
-build the poster.)
-
-```text
-portal.config.ts      the one file a fork edits
-src/config.ts         what the config means, and its checks
-src/api/              the API client and the response types it reads
-src/lib/scope.ts      config → the portal's 2027 projects, each with its reasons
-src/lib/gaa.ts        config → the 2020–2026 programs that name the places
-src/pages/            Projects (with offices and their districts), Enacted (2020–2026), Project, About
-src/styles/           theme tokens and layout
-scripts/setup.ts      npm run setup
-scripts/check.ts      npm run check (exits non-zero on a broken config; use it in CI)
-scripts/build-poster.ts  npm run build:poster → docs/poster/
-examples/             a DEO, a city, a municipality
+```bash
+npm run build   # Type-check and build the static site into dist/
+npm run lint    # Check the source
+npm run check   # Reconcile configured Budget API queries; requires upstream access
 ```
+
+`portal.config.ts` defines the municipality aliases and discovery scope. Location matching is conservative: a common name such as “Rodriguez” alone does not establish that a record belongs to Rodriguez, Rizal.
+
+## Deploy to Vercel
+
+1. Import this GitHub repository into Vercel.
+2. Use the **Vite** framework preset, **`npm run build`** build command and **`dist`** output directory.
+3. Deploy from **`main`**. The included `vercel.json` handles client-side routes.
+
+No application database or API key is required for the public BetterGov API. Set `siteUrl` in `portal.config.ts` after choosing a public domain. Use `VITE_API_BASE` only when intentionally selecting another compatible Budget API host. See [deployment notes](docs/deploy.md).
+
+## Technology and sources
+
+React 19 · TypeScript · Vite · React Router · Leaflet / OpenStreetMap. Self-hosted typography: Bricolage Grotesque, DM Serif Display and Inter.
+
+- [BetterGov Budget API documentation](https://budget.bettergov.ph/docs): enacted budgets, proposals and source-document references.
+- [BetterGov DPWH mirror](https://github.com/bettergovph/api.dpwh): project/contract records originating from the DPWH transparency service.
+- [OpenStreetMap](https://www.openstreetmap.org/copyright): map tiles and attribution. Choose an appropriate tile service before scaling beyond the public service’s usage policy.
+- [Image sources and licences](public/images/ATTRIBUTION.md) and [font licence files](public/fonts).
+
+Built on the open-source [BetterGov transparency portal](https://github.com/bettergovph/transparency-portal), adapted for Montalban. Local QA evidence, browser artifacts and internal planning notes are intentionally excluded from this repository.
 
 ## Licence
 
-MIT. The budget documents are works of the Philippine government; the comparison data
-carries the notices printed on every page.
+Application code: [MIT](LICENSE). Images, fonts and source datasets retain their respective licences, attribution requirements and upstream notices.
