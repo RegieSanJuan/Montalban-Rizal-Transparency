@@ -71,6 +71,7 @@ async function main() {
   console.log(`  NEP:        ${php(s.nep.php)} on ${count(s.nep.rows)} lines`);
   console.log(`  House bill: ${php(s.house.php)} on ${count(s.house.rows)} lines`);
   console.log('  Compared, never added.');
+  console.log(`  Location review: ${scope.reviewProjects.length}; geographic rejections: ${scope.rejectedProjects.length} (neither included in totals)`);
   for (const [g, c] of Object.entries(s.groups)) if (c.rows) console.log(`  ${g.padEnd(13)} ${count(c.rows)}`);
   for (const [d, c] of Object.entries(s.byDataset)) console.log(`  program ${d.padEnd(5)} ${count(c.rows)}`);
 
@@ -88,16 +89,18 @@ async function main() {
     const gaa = await resolveGaa(api, config);
     console.log(`\nEnacted budgets 2020–2026: ${plural(gaa.rows.length, "program or project", "programs and projects")} name the places (${count(gaa.searched)} departments searched)`);
     for (const q of gaa.queries) {
+      if (!q.matched) continue;
       console.log(`  "${q.q}" in ${departmentShort(q.department)}: ${count(q.matched)}${q.truncated ? ` (cut at ${count(q.fetched)})` : ''}`);
       if (q.truncated) problems.push(`"${q.q}" matches ${count(q.matched)} ${departmentShort(q.department)} programs, more than the portal loads. Make q narrower.`);
     }
+    console.log(`  Location review: ${gaa.reviewRows.length}; geographic rejections: ${gaa.rejectedRows.length} (neither included in totals)`);
     for (const t of gaaYearTotals(gaa.rows)) console.log(`  ${t.year}: ${php(t.amount)} on ${count(t.programs)} programs`);
 
     // Reconcile: for every search and year, the rows loaded add up to the API's own total for that search.
-    const withExcluded = [...gaa.rows, ...gaa.excluded.flatMap((x) => (x.row ? [x.row] : []))];
+    const withExcluded = [...gaa.rows, ...gaa.reviewRows, ...gaa.rejectedRows.map(x => x.row), ...gaa.excluded.flatMap((x) => (x.row ? [x.row] : []))];
     let checked = 0;
     for (const q of gaa.queries) {
-      if (q.truncated) continue;
+      if (q.truncated || !q.matched) continue;
       const mine = withExcluded.filter((r) => r.department_id === q.department_id && r.reasons.includes(q.place));
       for (const year of GAA_YEARS) {
         const theirs = (await api.json<GaaEnvelope<unknown[]>>(`/api/v1/gaa/departments/${q.department_id}/programs`, { q: q.q, limit: 1, year })).meta.matched_amount ?? 0;

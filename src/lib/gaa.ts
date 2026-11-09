@@ -22,6 +22,8 @@ import type { Exclusion, PortalConfig } from '../config';
 import type { Client } from '../api/client';
 import type { GaaDepartment, GaaProgram } from '../api/types';
 import { GAA_YEARS } from '../api/types';
+import { montalbanLocation, type ProjectLocation } from './location-policy';
+import { gaaSnapshotKey, readGaaSnapshot } from './gaa-snapshot';
 
 export interface GaaRow extends GaaProgram {
   /** `gaa:<fam_key>`, the key exclusions use. */
@@ -29,6 +31,7 @@ export interface GaaRow extends GaaProgram {
   department: string;
   /** The place labels whose search found it. */
   reasons: string[];
+  location?: ProjectLocation;
 }
 
 export interface GaaQuery {
@@ -45,7 +48,11 @@ export interface GaaQuery {
 }
 
 export interface GaaResult {
+  /** Retrieval timestamp when loaded from the reconciled local snapshot. */
+  checkedAt?: string;
   rows: GaaRow[];
+  reviewRows: GaaRow[];
+  rejectedRows: { row: GaaRow; note: string }[];
   /** One per place and department with a match. */
   queries: GaaQuery[];
   /** Departments searched per place. */
@@ -65,10 +72,21 @@ const cache = new Map<string, Promise<GaaResult>>();
 
 /** Memoised per API host and places, so leaving and reopening the page does not search again. */
 export function loadGaa(client: Client, config: PortalConfig, onProgress?: (done: number, total: number) => void): Promise<GaaResult> {
-  const key = JSON.stringify([client.base, config.scope.places ?? [], config.scope.exclude ?? []]);
+  const key = gaaSnapshotKey(client.base,config);
   let hit = cache.get(key);
   if (!hit) {
-    hit = resolveGaa(client, config, onProgress);
+    hit = (async()=>{
+      if(typeof window!=='undefined' && config.scope.locationPolicy==='montalban-rizal'){
+        try {
+          const response=await fetch('/data/gaa-snapshot.json',{signal:AbortSignal.timeout(15000)});
+          if(response.ok){
+            const snapshot=readGaaSnapshot(await response.json(),key);
+            if(snapshot){onProgress?.(snapshot.queries.length,snapshot.queries.length);return snapshot;}
+          }
+        } catch { /* Missing/invalid snapshot: fetch the original API instead. */ }
+      }
+      return resolveGaa(client,config,onProgress);
+    })();
     hit.catch(() => cache.delete(key));
     cache.set(key, hit);
   }
@@ -76,7 +94,7 @@ export function loadGaa(client: Client, config: PortalConfig, onProgress?: (done
 }
 
 export async function resolveGaa(client: Client, config: PortalConfig, onProgress?: (done: number, total: number) => void): Promise<GaaResult> {
-  const places = config.scope.places ?? [];
+  const places = [...(config.scope.places ?? []), ...(config.scope.discoveryQueries ?? [])];
   const departments = (await client.gaaDepartments()).data;
   const jobs = places.flatMap((p) => departments.map((d) => ({ place: p.label, q: p.q ?? p.label, department: d })));
 
@@ -100,7 +118,6 @@ export async function resolveGaa(client: Client, config: PortalConfig, onProgres
   jobs.forEach((j, i) => {
     const { first, rows, truncated } = results[i];
     const matched = first.meta.matched ?? rows.length;
-    if (!matched) return;
     queries.push({
       place: j.place,
       q: j.q,
@@ -126,8 +143,17 @@ export async function resolveGaa(client: Client, config: PortalConfig, onProgres
     .filter((r) => !excludedKeys.has(r.key))
     .sort((a, b) => (b.years[latest]?.amount ?? 0) - (a.years[latest]?.amount ?? 0) || lastYear(b) - lastYear(a) || a.name.localeCompare(b.name));
 
+  const reviewRows: GaaRow[] = [];
+  const rejectedRows: { row: GaaRow; note: string }[] = [];
+  const included = config.scope.locationPolicy === 'montalban-rizal' ? rows.filter(row => {
+    const decision = montalbanLocation(row.name);
+    if (decision.confidence === 'excluded') { rejectedRows.push({ row, note: decision.note }); return false; }
+    row.location = decision;
+    if (decision.confidence !== 'named') { reviewRows.push(row); return false; }
+    return true;
+  }) : rows;
   return {
-    rows,
+    rows: included, reviewRows, rejectedRows,
     queries: queries.sort((a, b) => b.matched - a.matched),
     searched: departments.length,
     departments,

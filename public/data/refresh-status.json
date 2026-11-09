@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "lastAttemptAt": "2026-11-08T14:51:29.306Z",
+  "lastSuccessAt": null,
+  "state": "failed",
+  "serving": "last-known-good",
+  "message": "Refresh could not be completed. Showing the last validated data.",
+  "sources": {
+    "budget": {
+      "checkedAt": "2026-11-08T08:36:33.177Z"
+    },
+    "dpwh": {
+      "checkedAt": "2026-11-08T08:33:29.079Z"
+    }
+  },
+  "retry": {
+    "attempt": 3,
+    "maxAttempts": 3
+  }
+}

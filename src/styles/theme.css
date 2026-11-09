@@ -4,7 +4,7 @@
    but keep the type roles.
 
    Republic of the Philippines brand guidelines, section 04:
-   "Figtree speaks. Inter works. Mono labels."
+   "Bricolage speaks. Inter works."
    ============================================================= */
 
 :root {
@@ -28,7 +28,7 @@
   --neutral: #8a7c5a;
 
   /* Type roles */
-  --font-hero: "Figtree", "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-hero: "Bricolage Grotesque", "Bricolage Fallback", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 

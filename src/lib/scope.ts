@@ -14,6 +14,7 @@ import { DATASET_KEYS, type DatasetKey, type Exclusion, type PortalConfig } from
 import type { Client, Params } from '../api/client';
 import type { BridgeGroup, Disclaimer, Meta, OfficeLens, ProjectRow } from '../api/types';
 import { BRIDGE_GROUPS } from '../api/types';
+import { montalbanLocation, type ProjectLocation } from './location-policy';
 
 export type Reason =
   | { kind: 'office'; label: string }
@@ -23,6 +24,7 @@ export interface ScopedProject extends ProjectRow {
   /** `<dataset>:<id>`, the key exclusions and reports use. */
   key: string;
   reasons: Reason[];
+  location?: ProjectLocation;
 }
 
 export interface QueryReport {
@@ -44,6 +46,10 @@ export interface QueryReport {
 
 export interface ScopeResult {
   projects: ScopedProject[];
+  /** Shared or unresolved locations, visible separately and never included in municipal totals. */
+  reviewProjects: ScopedProject[];
+  /** All geographically rejected candidates, retained for audit/reconciliation. */
+  rejectedProjects: { project: ScopedProject; note: string }[];
   excluded: { exclusion: Exclusion; project: ScopedProject | null }[];
   queries: QueryReport[];
   /** Every disclaimer the API attached to the responses used, verbatim, in order. */
@@ -54,7 +60,8 @@ export interface ScopeResult {
 export const projectKey = (dataset: string, id: string) => `${dataset}:${id}`;
 
 export async function resolveScope(client: Client, config: PortalConfig): Promise<ScopeResult> {
-  const { offices = [], places = [] } = config.scope;
+  const { offices = [] } = config.scope;
+  const places = [...(config.scope.places ?? []), ...(config.scope.discoveryQueries ?? [])];
   const exclude = (config.scope.exclude ?? []).filter((e) => !e.key.startsWith('gaa:'));
 
   type Job = { kind: Reason['kind']; label: string; dataset: DatasetKey; params: Params; region?: string };
@@ -119,7 +126,16 @@ export async function resolveScope(client: Client, config: PortalConfig): Promis
     // No queries ran (an empty scope): still return the API's meta for the footer.
     meta = (await client.overview()).meta;
   }
-  return { projects, excluded, queries, disclaimers: ordered, meta };
+  const reviewProjects: ScopedProject[] = [];
+  const rejectedProjects: { project: ScopedProject; note: string }[] = [];
+  const included = config.scope.locationPolicy === 'montalban-rizal' ? projects.filter(project => {
+    const decision = montalbanLocation(project.title);
+    if (decision.confidence === 'excluded') { rejectedProjects.push({ project, note: decision.note }); return false; }
+    project.location = decision;
+    if (decision.confidence !== 'named') { reviewProjects.push(project); return false; }
+    return true;
+  }) : projects;
+  return { projects: included, reviewProjects, rejectedProjects, excluded, queries, disclaimers: ordered, meta };
 }
 
 function byHouseThenNep(a: ProjectRow, b: ProjectRow): number {

@@ -15,7 +15,8 @@ import { BRIDGE_GROUPS } from '../api/types';
 import { count, php, phpDelta, plural } from '../lib/format';
 import { usePortal } from '../lib/portal-context';
 import type { QueryReport, ScopedProject } from '../lib/scope';
-import { Await, External } from './Bits';
+import { GROUP_FIL, knownTextFil, TERM_FIL, tierTextFil } from '../lib/display';
+import { Await, External, OriginalEnglish } from './Bits';
 
 interface DistrictRow {
   id: string;
@@ -44,7 +45,7 @@ export default function OfficesSection() {
   const projects = scope.status === 'ready' ? scope.value.projects : [];
   return (
     <section className="section" id="offices" aria-labelledby="offices-h">
-      <Await state={districts} what="DPWH offices and districts">
+      <Await state={districts} what="mga DPWH office at distrito">
         {(list) => <Offices list={list} queries={queries} projects={projects} />}
       </Await>
     </section>
@@ -97,13 +98,14 @@ function Offices({ list, queries, projects }: { list: Envelope<DistrictCard>[]; 
   return (
     <>
       <h2 id="offices-h" className="section-h">
-        {plural(offices.length, 'DPWH district engineering office')}, serving {plural(districtCount, 'legislative district')}
+        Ang DPWH office na nagpapatupad: {plural(offices.length, 'opisina', 'opisina')} para sa {plural(districtCount, 'distrito', 'distrito')}
       </h2>
       <p className="section-lede">
-        DPWH lists its money by the district engineering office that does the work. Each office serves one or more legislative
-        districts, and a shared office’s money is never split between them. Representatives shown hold the seat in the 20th
-        Congress.{note && <> {note}</>}
+        Inililista ng DPWH ang pondo ayon sa district engineering office na gumagawa ng proyekto. Ang isang opisina ay maaaring
+        maglingkod sa ilang distrito, kaya ang pondo nito ay hindi hinahati at hindi buong para sa Montalban. Ang mga kinatawan
+        ay ang nakaupo sa 20th Congress.{note && (knownTextFil(note) ? <> {knownTextFil(note)}</> : <> <span lang="en">{note}</span></>)}
       </p>
+      {note && knownTextFil(note) && <OriginalEnglish><p>{note}</p></OriginalEnglish>}
 
       <div className={`ogrid${offices.length === 1 ? ' one' : ''}`}>
         {offices.map((o) => <Office key={o.office.id} view={o} />)}
@@ -111,13 +113,16 @@ function Offices({ list, queries, projects }: { list: Envelope<DistrictCard>[]; 
 
       {noOffice.length > 0 && (
         <p className="fine">
-          No DPWH district office is listed for {noOffice.map((c) => c.label).join('; ')}.
+          Walang nakalistang DPWH district office para sa {noOffice.map((c) => c.label).join('; ')}.
         </p>
       )}
       <p className="fine">
-        Office figures are its named projects in the 2027 NEP and the House bill, compared, never added.
-        {residualTerm && <> {residualTerm.term}: {residualTerm.meaning.charAt(0).toLowerCase() + residualTerm.meaning.slice(1)}</>}
-        {credits.length > 0 && <> Portraits: {credits.join('; ')}.</>}
+        Ang mga numero ng bawat opisina ay ang mga nakapangalang proyekto nito sa NEP at House bill para sa 2027: ikinukumpara,
+        hindi pinagsasama.
+        {residualTerm && (TERM_FIL.residual
+          ? <> {TERM_FIL.residual.term}: {TERM_FIL.residual.meaning}</>
+          : <> <span lang="en">{residualTerm.term}: {residualTerm.meaning}</span></>)}
+        {credits.length > 0 && <> Mga larawan: <span lang="en">{credits.join('; ')}</span>.</>}
       </p>
     </>
   );
@@ -129,7 +134,7 @@ function Office({ view }: { view: OfficeView }) {
   const wholeNep = office.years?.find((y) => y.fy === 2027 && y.stage === 'nep')?.php ?? null;
   const change = f && f.nep_php != null && f.hgab3_php != null ? f.hgab3_php - f.nep_php : null;
   // The project list, narrowed to this office's lines (and a status).
-  const filter = (status?: string) => `/?office=${encodeURIComponent(printed)}${status ? `&status=${status}` : ''}#projects`;
+  const filter = (status?: string) => `/panukala-2027?office=${encodeURIComponent(printed)}${status ? `&status=${status}` : ''}#projects`;
   const groups = f ? BRIDGE_GROUPS.map((g) => f.bridge.groups[g]).filter((c) => c && c.rows > 0) : [];
   const unconfirmed = f?.annotations?.unconfirmed_rows ?? 0;
   const held = f?.office_change?.rows ?? 0;
@@ -138,16 +143,18 @@ function Office({ view }: { view: OfficeView }) {
     <article className="ocard">
       <header className="ocard-head">
         <div>
-          <p className="label">DPWH {office.kind_label.replace(/ \(DEO\)$/, '')}{office.region && <> · {office.region}</>}</p>
+          <p className="label"><span lang="en">DPWH {office.kind_label.replace(/ \(DEO\)$/, '')}</span>{office.region && <> · {office.region}</>}</p>
           <h3>{printed}</h3>
         </div>
-        <span className={`tag tier tier-${office.tier}`}>{office.tier_text}</span>
+        {tierTextFil(office.tier_text)
+          ? <span className={`tag tier tier-${office.tier}`}>{tierTextFil(office.tier_text)}</span>
+          : <span className={`tag tier tier-${office.tier}`} lang="en">{office.tier_text}</span>}
       </header>
 
       <dl className="ocard-figs">
         <div>
-          <dt className="label">In this portal</dt>
-          <dd>{lines ? <Link to={filter()} className="ocard-lines">{plural(lines, 'line')} →</Link> : <span className="muted">none</span>}</dd>
+          <dt className="label">Sa portal na ito</dt>
+          <dd>{lines ? <Link to={filter()} className="ocard-lines">{plural(lines, 'linya', 'linya')} →</Link> : <span className="muted">wala</span>}</dd>
         </div>
         <div>
           <dt className="label">NEP</dt>
@@ -158,7 +165,7 @@ function Office({ view }: { view: OfficeView }) {
           <dd className="num stat-accent">{php(f?.hgab3_php)}</dd>
         </div>
         <div>
-          <dt className="label">Change</dt>
+          <dt className="label">Pagbabago</dt>
           <dd className="num">{phpDelta(change)}</dd>
         </div>
       </dl>
@@ -166,24 +173,25 @@ function Office({ view }: { view: OfficeView }) {
       {groups.length > 0 && (
         <p className="ocard-groups">
           {groups.map((c) => {
-            const text = <><span className={`status-dot g-${c.group}`} aria-hidden="true" />{count(c.rows)} {c.label.charAt(0).toLowerCase() + c.label.slice(1)}</>;
+            const label = GROUP_FIL[c.group] ?? c.label;
+            const text = <><span className={`status-dot g-${c.group}`} aria-hidden="true" />{count(c.rows)} {label.charAt(0).toLowerCase() + label.slice(1)}</>;
             // These counts are the whole office's: link them only when all of its lines are in the portal.
             return query ? <Link key={c.group} to={filter(c.group)}>{text}</Link> : <span key={c.group}>{text}</span>;
           })}
         </p>
       )}
       <p className="ocard-note">
-        Named projects{f ? <>: {count(f.nep_records)} in the NEP, {count(f.hgab3_records)} in the House bill</> : null}.
-        {wholeNep != null && <> The whole office in the NEP: {php(wholeNep)}.</>}
-        {unconfirmed > 0 && <> Includes {plural(unconfirmed, 'unconfirmed match', 'unconfirmed matches')} ({php(f?.annotations?.unconfirmed_php)}).</>}
-        {held > 0 && <> {plural(held, 'line')} whose two versions name different offices {held === 1 ? 'is' : 'are'} not in these figures.</>}{' '}
-        <Link to={`/gaa#${office.id}`}>Its budget each year since 2020 →</Link>
+        Mga nakapangalang proyekto{f ? <>: {count(f.nep_records)} sa NEP, {count(f.hgab3_records)} sa House bill</> : null}.
+        {wholeNep != null && <> Buong opisina sa NEP: {php(wholeNep)}.</>}
+        {unconfirmed > 0 && <> Kasama ang {plural(unconfirmed, 'hindi kumpirmadong tugma', 'hindi kumpirmadong tugma')} ({php(f?.annotations?.unconfirmed_php)}).</>}
+        {held > 0 && <> Hindi kasama sa mga numerong ito ang {plural(held, 'linya', 'linya')} na magkaiba ang opisina sa dalawang bersyon.</>}{' '}
+        <Link to={`/gaa#${office.id}`}>Budget nito bawat taon mula 2020 →</Link>
       </p>
 
       <div className="ocard-districts">
         <p className="label">
-          {districts.length === 1 ? 'Legislative district it serves' : `${districts.length} legislative districts it serves`}
-          {office.tier === 'B' && <> · shared, not split</>}
+          {districts.length === 1 ? 'Distritong pinagsisilbihan' : `${districts.length} distritong pinagsisilbihan`}
+          {office.tier === 'B' && <> · kahati, hindi hinahati ang pondo</>}
         </p>
         <ul>
           {districts.map((d) => <District key={d.id} row={d} />)}
@@ -192,7 +200,7 @@ function Office({ view }: { view: OfficeView }) {
 
       {!query && office.projects_url && (
         <p className="small">
-          This portal lists only this office’s lines that name its place. <External href={office.projects_url}>All of them</External>
+          Ang mga linyang tumutukoy lang sa bayan ang nasa portal na ito. <External href={office.projects_url}>Lahat ng linya ng opisina</External>
         </p>
       )}
     </article>
@@ -208,7 +216,7 @@ function District({ row }: { row: DistrictRow }) {
         <img
           className="odistrict-photo"
           src={portrait.url}
-          alt={`Portrait of ${rep?.name ?? row.label}`}
+          alt={`Larawan ni ${rep?.name ?? row.label}`}
           title={`${portrait.attribution} · ${portrait.license} · ${portrait.source_url}`}
           width="40"
           height="50"
@@ -220,12 +228,12 @@ function District({ row }: { row: DistrictRow }) {
       <div>
         <p className="odistrict-label">{row.label}</p>
         <p className="small">
-          {rep ? rep.name : <span className="muted">No representative listed</span>}
+          {rep ? rep.name : <span className="muted">Walang nakalistang kinatawan</span>}
         </p>
         <p className="odistrict-links small">
-          {rep?.bills_url && <External href={rep.bills_url}>Bills</External>}
-          {row.card && <External href={row.card.url}>District page</External>}
-          {row.alsoServedBy.length > 0 && <span className="muted">also served by {row.alsoServedBy.join(', ')}</span>}
+          {rep?.bills_url && <External href={rep.bills_url}>Mga panukalang batas</External>}
+          {row.card && <External href={row.card.url}>Pahina ng distrito</External>}
+          {row.alsoServedBy.length > 0 && <span className="muted">pinagsisilbihan din ng {row.alsoServedBy.join(', ')}</span>}
         </p>
       </div>
     </li>

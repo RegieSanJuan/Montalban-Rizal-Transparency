@@ -66,6 +66,10 @@ export interface PortalConfig {
   /** Budget API host. Default https://budget.bettergov.ph. VITE_API_BASE overrides it. */
   api?: string;
   scope: {
+    /** Opt-in geographic evidence rules. Unknown and shared locations stay outside municipal totals. */
+    locationPolicy?: 'montalban-rizal';
+    /** Additional distinctive local names searched in both proposal and historical datasets. */
+    discoveryQueries?: PlaceQuery[];
     /**
      * DPWH offices, named exactly as the documents publish them
      * ("Bohol 1st District Engineering Office"). Every DPWH line listed under

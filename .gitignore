@@ -7,3 +7,12 @@ dist
 .env.local
 *.log
 .DS_Store
+
+# Local QA, browser evidence, and agent planning (kept locally)
+qa/
+.playwright-cli/
+tests/
+docs/orchestration/
+docs/research/
+docs/superpowers/
+data/audits/
